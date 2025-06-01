@@ -1,0 +1,8 @@
+# .gitignore
+
+__pycache__/
+.cache/
+osmnx_cache/
+*.pyc
+cache
+cache/

@@ -30,7 +30,7 @@ pip install osmnx networkx pandas numpy geopy
 Run the simulation script:
 
 ```bash
-python gps_simulation.py
+python main.py
 ```
 
 This will generate two CSV files:

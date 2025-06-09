@@ -1,6 +1,9 @@
 # 🚚 GPS Trajectory Simulator with Realistic Timing and Noise
 
-This project simulates GPS route data between an origin and destination using **real road network data** from OpenStreetMap (OSM). It incorporates **realistic timing** based on road types, traffic patterns, and junction delays. Additionally, it can generate **noisy GPS tracks** to simulate sensor inaccuracy.
+This project simulates GPS route data using **real road network data** from OpenStreetMap (OSM).  
+It incorporates **realistic timing** based on road types, traffic patterns, and junction delays.  
+Additionally, it can generate **GPS noise** to simulate sensor inaccuracies and  
+simulate **off-route anomalies** where vehicles deviate from the planned route and then return.
 
 ---
 
@@ -8,9 +11,9 @@ This project simulates GPS route data between an origin and destination using **
 
 - Realistic routing using OSM road network  
 - Speed estimation based on road type and urban context  
-- Time-of-day traffic modifiers (rush hour effects)  
-- Random delays at intersections (junctions)  
-- Timestamp generation for each GPS point  
+- Time-of-day traffic modifiers (e.g., rush hour slowdowns)- Random delays at intersections (junctions)  
+- Timestamp generation for each GPS point
+- Off-route anomaly injection simulating route deviations and returns  
 - Optional GPS noise injection to simulate real-world GPS drift  
 
 ---
@@ -27,28 +30,36 @@ pip install osmnx networkx pandas numpy geopy
 
 ## 🚀 Usage
 
-Run the simulation script:
+Generate Normal Route:
 
 ```bash
-python main.py
+python generate_normalroute.py
 ```
 
-This will generate two CSV files:
+Saves clean, timestamped GPS routes to dataset/normal_route/.
 
-- `reference_route.csv`: Clean, timestamped GPS data  
-- `noisy_route.csv`: Same route with added positional noise  
+Generate Route with Anomalies
+
+```bash
+python generate_offroute.py
+```
+Saves GPS routes containing off-route deviations to dataset/off_route/.
 
 ---
 
 ## 📁 Project Structure
 
-| File / Folder          | Description                                     |
-|------------------------|-------------------------------------------------|
-| `main.py`              | Main script for generating the GPS data         |
-| `reference_route.csv`  | Clean, time-based GPS route                     |
-| `noisy_route.csv`      | Noisy GPS data simulating sensor drift          |
-| `images/`              | Folder to store generated map images            |
-| `README.md`            | Project documentation                           |
+| File / Folder            | Description                                        |
+|-------------------------|----------------------------------------------------|
+| `generate_offroute.py`  | Script to generate GPS routes with off-route anomalies |
+| `generate_normalroute.py` | Script to generate normal GPS routes                |
+| `dataset/normal_route/` | Folder containing generated normal route CSV files  |
+| `dataset/off_route/`    | Folder containing generated off-route anomaly CSV files |
+| `images/`               | Folder to store generated map images                 |
+| `utils/routing.py`      | Routing and GPS simulation utility functions         |
+| `README.md`             | Project documentation                                |
+
+
 
 ---
 
@@ -56,12 +67,13 @@ This will generate two CSV files:
 
 The following aspects can be adjusted inside the script:
 
-| Parameter              | Description                                      |
-|------------------------|--------------------------------------------------|
-| `SPEED_BY_HIGHWAY`     | Default speeds (km/h) for each highway type      |
-| `traffic_modifier()`   | Adjusts speed based on time of day               |
-| `is_junction()`        | Adds extra delay when approaching intersections  |
-| `add_gps_noise()`      | Adds positional noise (radius in meters)         |
+| Parameter                  | Description                                   | Example / Default                                                         |
+| -------------------------- | --------------------------------------------- | ------------------------------------------------------------------------- |
+| `SPEED_BY_HIGHWAY`         | Default speeds (km/h) per highway type        | motorway: 100, residential: 30                                            |
+| `traffic_modifier(hour)`   | Traffic speed multiplier by time of day       | 0.7 during 7-9am and 5-7pm                                                |
+| `is_junction(node)`        | Adds random wait time at intersections (secs) | Random between 3 and 10 seconds                                           |
+| `add_gps_noise()`          | Adds positional noise (meters)                | Optional, 3-5 meters                                                      |
+| `inject_off_route_anomaly` | Injects off-route segments in routes          | max\_anomalies=1, min\_length=5, max\_length=50, anomaly\_start\_prob=0.1 |
 
 ---
 
@@ -79,10 +91,17 @@ You can replace these with any coordinates globally.
 
 ## 🖼 Example Output
 
+Normal Route:
+
 <p align="center">
-  <img src="images/route_map_example.png" alt="Route Map Example" width="600"/>
+  <img src="route_map_normal_example.png" alt="Route Map Example" width="600"/>
 </p>
 
+Anomaly Route:
+
+<p align="center">
+  <img src="route_map_anomaly_example.png" alt="Route Map Example" width="600"/>
+</p>
 
 ---
 

@@ -94,13 +94,13 @@ You can replace these with any coordinates globally.
 Normal Route:
 
 <p align="center">
-  <img src="route_map_normal_example.png" alt="Route Map Example" width="600"/>
+  <img src="images/route_map_normal_example.png" alt="Route Normal Map Example" width="600"/>
 </p>
 
 Anomaly Route:
 
 <p align="center">
-  <img src="route_map_anomaly_example.png" alt="Route Map Example" width="600"/>
+  <img src="images/route_map_anomaly_example.png" alt="Route Anomaly Map Example" width="600"/>
 </p>
 
 ---

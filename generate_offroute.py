@@ -3,11 +3,11 @@ from datetime import datetime
 import os
 
 if __name__ == "__main__":
-    origin_coords = (40.3233635, 28.0000311)
-    destination_coords = (40.825069, 29.9252826)
+    origin_coords = (40.731573, 31.563471)
+    destination_coords = (39.967761, 32.630573)
     start_time = datetime(2025, 6, 1, 8, 0, 0)
 
-    G, route, nodes = generate_gps_route_with_nodes(origin_coords, destination_coords)
+    G, route = generate_gps_route_with_nodes(origin_coords, destination_coords)
 
     # Off-route anomaly parameters
     anomaly_start_prob = 0.1

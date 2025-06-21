@@ -6,14 +6,19 @@ from geopy.distance import geodesic
 from datetime import datetime, timedelta
 import random
 
-SPEED_BY_HIGHWAY = {
-    "motorway": 100,
+DEFAULT_SPEED_BY_HIGHWAY = {
+    "motorway": 120,
     "trunk": 85,
     "primary": 70,
     "secondary": 55,
     "tertiary": 45,
     "residential": 30,
-    "service": 20
+    "service": 20,
+    "unclassified": 25,
+    "trunk_link": 40,
+    "primary_link": 40,
+    "secondary_link": 30,
+    "tertiary_link": 25,
 }
 
 def traffic_modifier(hour):
@@ -25,7 +30,7 @@ def traffic_modifier(hour):
         return 1.0
 
 def estimate_speed(highway, is_urban):
-    base_kmh = SPEED_BY_HIGHWAY.get(highway, 50)
+    base_kmh = DEFAULT_SPEED_BY_HIGHWAY.get(highway, 50)
     if is_urban:
         base_kmh *= 0.8
     return base_kmh / 3.6
@@ -36,18 +41,6 @@ def is_junction(G, node):
 def haversine_distance(p1, p2):
     return geodesic(p1, p2).meters
 
-def add_edge_travel_time(G, is_urban=True, ref_hour=8):
-    for u, v, k, data in G.edges(keys=True, data=True):
-        highway = data.get("highway", "primary")
-        if isinstance(highway, list):
-            highway = highway[0]
-
-        speed = estimate_speed(highway, is_urban)
-        speed *= traffic_modifier(ref_hour)
-        length = data.get("length", 1)
-
-        data["travel_time"] = length / speed
-
 def generate_gps_route_with_nodes(origin_coords, destination_coords, start_time=None):
     BUFFER = 0.2
     north = max(origin_coords[0], destination_coords[0]) + BUFFER
@@ -57,51 +50,53 @@ def generate_gps_route_with_nodes(origin_coords, destination_coords, start_time=
 
     bbox = (west, south, east, north)
     G = ox.graph_from_bbox(bbox, network_type="drive", simplify=True)
-    add_edge_travel_time(G, is_urban=True)
 
     orig_node = ox.nearest_nodes(G, origin_coords[1], origin_coords[0])
     dest_node = ox.nearest_nodes(G, destination_coords[1], destination_coords[0])
     route = nx.shortest_path(G, orig_node, dest_node, weight="travel_time")
-    nodes = ox.graph_to_gdfs(G, edges=False).loc[route]
 
-    return G, route, nodes
+
+    return G, route
 
 def simulate_gps_from_nodes(G, route, start_time=None, anomaly_flags=None):
     current_time = start_time or datetime(2025, 6, 1, 8, 0, 0)
     gps_data = []
 
     for i in range(len(route) - 1):
-        n1 = G.nodes[route[i]]
-        n2 = G.nodes[route[i + 1]]
 
-        coord1 = (n1['y'], n1['x'])
-        coord2 = (n2['y'], n2['x'])
-        segment_dist = haversine_distance(coord1, coord2)
-
-        edge_data = G.get_edge_data(route[i], route[i + 1]) or G.get_edge_data(route[i + 1], route[i])
+        edge_data = G.get_edge_data(route[i], route[i + 1]) 
         if edge_data is None:
             print(f"[WARNING] Edge not found between {route[i]} and {route[i+1]}. Skipping segment.")
             continue
 
+
         edge_attrs = min(edge_data.values(), key=lambda d: d.get("length", float('inf')))
-        highway = edge_attrs.get("highway", "primary")
-        if isinstance(highway, list):
-            highway = highway[0]
+ 
+        segment_dist = edge_attrs.get("length", 0)
 
-        is_urban = highway in ["residential", "service"]
-        base_speed = estimate_speed(highway, is_urban)
-        traffic_factor = traffic_modifier(current_time.hour)
-        actual_speed = base_speed * traffic_factor
-        duration = segment_dist / actual_speed
+        max_speed_raw = edge_attrs.get("maxspeed")
+        try:
+            max_speed = float(str(max_speed_raw).split()[0]) if max_speed_raw else None
+        except (ValueError, TypeError):
+            max_speed = None
 
-        if is_junction(G, route[i]):
-            duration += random.uniform(3, 10)
+        if max_speed is None:
+            highway_type = edge_attrs.get("highway")
+            if isinstance(highway_type, list):
+                highway_type = highway_type[0]
+            max_speed = DEFAULT_SPEED_BY_HIGHWAY.get(highway_type, 50) 
+
+        duration = segment_dist / (max_speed / 3.6)        
+
+
+        n1 = G.nodes[route[i + 1]]
+        coord1 = (n1['y'], n1['x'])
 
         current_time += timedelta(seconds=duration)
         gps_data.append({
             "timestamp": current_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "latitude": coord2[0],
-            "longitude": coord2[1],
+            "latitude": coord1[0],
+            "longitude": coord1[1],
             "anomaly_flag": anomaly_flags[i+1] if anomaly_flags is not None else "normal"
         })
 
@@ -122,7 +117,7 @@ def inject_off_route_anomaly(G, route, deviation_distance=None, max_trials=10,
         new_route.append(route[i])
         anomaly_flags.append("normal")
 
-        if anomalies_injected < max_anomalies and 2 <= i <= route_len - 6:
+        if anomalies_injected < max_anomalies and 5 <= i <= route_len - 5:
             if random.random() < anomaly_start_prob:
                 anomaly_length = random.randint(min_length, max_length)
                 neighbors = list(G.neighbors(route[i]))
@@ -150,6 +145,7 @@ def inject_off_route_anomaly(G, route, deviation_distance=None, max_trials=10,
                                 continue
 
                             path_length_m = get_path_length(G, full_path)
+
                             if path_length_m < anomaly_length * 30:
                                 continue
 

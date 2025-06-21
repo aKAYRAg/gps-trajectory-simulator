@@ -6,3 +6,5 @@ osmnx_cache/
 *.pyc
 cache
 cache/
+.csv
+.txt

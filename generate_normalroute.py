@@ -7,7 +7,7 @@ if __name__ == "__main__":
     destination_coords = (40.825069, 29.9252826)
     start_time = datetime(2025, 6, 1, 8, 0, 0)
 
-    G, route, nodes = generate_gps_route_with_nodes(origin_coords, destination_coords)
+    G, route = generate_gps_route_with_nodes(origin_coords, destination_coords)
     df = simulate_gps_from_nodes(G, route, start_time)
 
     os.makedirs("dataset/normal_route", exist_ok=True)
